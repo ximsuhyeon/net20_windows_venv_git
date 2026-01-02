@@ -1,11 +1,11 @@
-from __future__ import annotations
 from pathlib import Path
 from urllib.parse import urlparse
 
 IN_FILE = "sites.txt"
 OUT_FILE = "cleaned_sites.txt"
 
-def normalize(line: str) -> str | None:
+
+def normalize(line: str):
     line = line.strip()
     if not line or line.startswith("#"):
         return None
@@ -17,32 +17,43 @@ def normalize(line: str) -> str | None:
     scheme = (p.scheme or "https").lower()
     netloc = p.netloc.lower()
     path = p.path if p.path else "/"
-    return p._replace(scheme=scheme, netloc=netloc, path=path, params="", query="", fragment="").geturl()
+    return p._replace(
+        scheme=scheme,
+        netloc=netloc,
+        path=path,
+        params="",
+        query="",
+        fragment=""
+    ).geturl()
 
-def load_sites() -> list[str]:
+
+def load_sites():
     p = Path.cwd() / IN_FILE
     if not p.exists():
         return []
     lines = p.read_text(encoding="utf-8").splitlines()
-    urls, seen = [], set()
+    urls = []
+    seen = set()
     for raw in lines:
         u = normalize(raw)
-        if not u or u in seen:
-            continue
-        seen.add(u)
-        urls.append(u)
+        if u and u not in seen:
+            seen.add(u)
+            urls.append(u)
     return urls
 
-def save_sites(urls: list[str]) -> None:
-    (Path.cwd() / IN_FILE).write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8", newline="\n")
-    (Path.cwd() / OUT_FILE).write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8", newline="\n")
 
-def cmd_list(urls: list[str]) -> None:
-    if not urls:
-        print("(비어있음)")
-        return
-    for i, u in enumerate(urls, start=1):
-        print(f"{i:02d}. {u}")
+def save_sites(urls):
+    (Path.cwd() / IN_FILE).write_text(
+        "\n".join(urls) + ("\n" if urls else ""),
+        encoding="utf-8",
+        newline="\n"
+    )
+    (Path.cwd() / OUT_FILE).write_text(
+        "\n".join(urls) + ("\n" if urls else ""),
+        encoding="utf-8",
+        newline="\n"
+    )
+
 
 def main():
     urls = load_sites()
@@ -61,19 +72,19 @@ def main():
             continue
 
         if line == "list":
-            cmd_list(urls)
+            for i, u in enumerate(urls, start=1):
+                print(f"{i:02d}. {u}")
             continue
 
         if line.startswith("add "):
             u = normalize(line[4:])
             if not u:
-                print("추가 실패: URL 형식이 이상함")
-                continue
-            if u in urls:
+                print("추가 실패: URL 형식 오류")
+            elif u in urls:
                 print("이미 존재:", u)
-                continue
-            urls.append(u)
-            print("추가됨:", u)
+            else:
+                urls.append(u)
+                print("추가됨:", u)
             continue
 
         if line.startswith("del "):
@@ -83,11 +94,23 @@ def main():
                 if 0 <= idx < len(urls):
                     print("삭제됨:", urls.pop(idx))
                 else:
-                    print("삭제 실패: 범위 밖 번호")
+                    print("삭제 실패: 번호 범위 오류")
             else:
                 u = normalize(arg)
-                if u and u in urls:
+                if u in urls:
                     urls.remove(u)
                     print("삭제됨:", u)
                 else:
-                    pr
+                    print("삭제 실패: 목록에 없음")
+            continue
+
+        if line == "end":
+            save_sites(urls)
+            print(f"저장 완료: {IN_FILE}, {OUT_FILE} (총 {len(urls)}개)")
+            break
+
+        print("알 수 없는 명령. 사용: add/del/list/end")
+
+
+if __name__ == "__main__":
+    main()
