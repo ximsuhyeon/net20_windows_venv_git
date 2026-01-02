@@ -5,22 +5,21 @@ IN_FILE = "sites.txt"
 OUT_FILE = "cleaned_sites.txt"
 
 
-def normalize(line: str):
-    line = line.strip()
-    if not line or line.startswith("#"):
+def normalize(url: str):
+    url = url.strip()
+    if not url:
         return None
-    if "://" not in line:
-        line = "https://" + line
-    p = urlparse(line)
+    if "://" not in url:
+        url = "https://" + url
+
+    p = urlparse(url)
     if not p.netloc:
         return None
-    scheme = (p.scheme or "https").lower()
-    netloc = p.netloc.lower()
-    path = p.path if p.path else "/"
+
     return p._replace(
-        scheme=scheme,
-        netloc=netloc,
-        path=path,
+        scheme=p.scheme.lower(),
+        netloc=p.netloc.lower(),
+        path=p.path if p.path else "/",
         params="",
         query="",
         fragment=""
@@ -28,14 +27,14 @@ def normalize(line: str):
 
 
 def load_sites():
-    p = Path.cwd() / IN_FILE
+    p = Path(IN_FILE)
     if not p.exists():
         return []
-    lines = p.read_text(encoding="utf-8").splitlines()
+
     urls = []
     seen = set()
-    for raw in lines:
-        u = normalize(raw)
+    for line in p.read_text(encoding="utf-8").splitlines():
+        u = normalize(line)
         if u and u not in seen:
             seen.add(u)
             urls.append(u)
@@ -43,73 +42,70 @@ def load_sites():
 
 
 def save_sites(urls):
-    (Path.cwd() / IN_FILE).write_text(
-        "\n".join(urls) + ("\n" if urls else ""),
-        encoding="utf-8",
-        newline="\n"
-    )
-    (Path.cwd() / OUT_FILE).write_text(
-        "\n".join(urls) + ("\n" if urls else ""),
-        encoding="utf-8",
-        newline="\n"
-    )
+    content = "\n".join(urls) + ("\n" if urls else "")
+    Path(IN_FILE).write_text(content, encoding="utf-8")
+    Path(OUT_FILE).write_text(content, encoding="utf-8")
+
+
+def show_list(urls):
+    print("\n[현재 사이트 목록]")
+    if not urls:
+        print("(비어있음)")
+    else:
+        for i, u in enumerate(urls, start=1):
+            print(f"{i}) {u}")
 
 
 def main():
     urls = load_sites()
-    print(f"로딩 완료: {len(urls)}개")
-    print("명령: add <url> | del <번호|url> | list | end")
 
     while True:
-        try:
-            line = input("> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            save_sites(urls)
-            print(f"\n저장 완료: {IN_FILE}, {OUT_FILE} (총 {len(urls)}개)")
-            break
+        show_list(urls)
+        print("\n메뉴 선택")
+        print("1. 추가")
+        print("2. 삭제")
+        print("3. 종료")
 
-        if not line:
-            continue
+        choice = input("선택 >> ").strip()
 
-        if line == "list":
-            for i, u in enumerate(urls, start=1):
-                print(f"{i:02d}. {u}")
-            continue
-
-        if line.startswith("add "):
-            u = normalize(line[4:])
+        # 1️⃣ 추가
+        if choice == "1":
+            raw = input("추가할 URL 입력: ").strip()
+            u = normalize(raw)
             if not u:
-                print("추가 실패: URL 형식 오류")
+                print("URL 형식 오류")
             elif u in urls:
-                print("이미 존재:", u)
+                print("이미 존재하는 URL")
             else:
                 urls.append(u)
-                print("추가됨:", u)
-            continue
+                print("추가 완료")
 
-        if line.startswith("del "):
-            arg = line[4:].strip()
-            if arg.isdigit():
-                idx = int(arg) - 1
-                if 0 <= idx < len(urls):
-                    print("삭제됨:", urls.pop(idx))
-                else:
-                    print("삭제 실패: 번호 범위 오류")
+        # 2️⃣ 삭제
+        elif choice == "2":
+            if not urls:
+                print("삭제할 항목이 없습니다")
+                continue
+
+            num = input("삭제할 번호 입력: ").strip()
+            if not num.isdigit():
+                print("숫자만 입력하세요")
+                continue
+
+            idx = int(num) - 1
+            if idx < 0 or idx >= len(urls):
+                print("번호 범위 오류")
             else:
-                u = normalize(arg)
-                if u in urls:
-                    urls.remove(u)
-                    print("삭제됨:", u)
-                else:
-                    print("삭제 실패: 목록에 없음")
-            continue
+                removed = urls.pop(idx)
+                print(f"삭제 완료: {removed}")
 
-        if line == "end":
+        # 3️⃣ 종료
+        elif choice == "3":
             save_sites(urls)
-            print(f"저장 완료: {IN_FILE}, {OUT_FILE} (총 {len(urls)}개)")
+            print("저장 후 종료합니다")
             break
 
-        print("알 수 없는 명령. 사용: add/del/list/end")
+        else:
+            print("잘못된 선택입니다 (1~3)")
 
 
 if __name__ == "__main__":
