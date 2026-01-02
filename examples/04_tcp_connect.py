@@ -14,7 +14,7 @@ def tcp_connect(host: str, port: int, timeout: float) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="example.com")
+    ap.add_argument("--host", default="naver.com")
     ap.add_argument("--port", type=int, default=443)
     ap.add_argument("--timeout", type=float, default=1.5)
     args = ap.parse_args()
