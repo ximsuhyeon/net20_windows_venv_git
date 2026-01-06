@@ -10,7 +10,7 @@ def main():
     ap.add_argument("--name", default="kim")
     args = ap.parse_args()
 
-    url = "https://httpbin.org/get"
+    url = "https://httpbipyn.org/get"
     r = requests.get(url, params={"name": args.name, "lang": "ko"}, timeout=4)
     data = r.json()
 
